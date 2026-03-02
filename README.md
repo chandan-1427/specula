@@ -488,7 +488,7 @@ api_keys (
 ### Monorepo Structure
 
 ```
-hono-test2/
+specula/
 ├── client/                    # React SPA (Vite)
 │   ├── public/               # Static assets
 │   ├── src/
