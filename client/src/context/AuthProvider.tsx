@@ -43,9 +43,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  // Show loading spinner while checking auth state
+  // display loading indicator while authentication state is being resolved
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative h-8 w-8">
+            <div className="absolute inset-0 rounded-full bg-indigo-500/70 blur-sm" />
+            <div className="absolute inset-1 rounded-full bg-indigo-400 animate-ping" />
+          </div>
+
+          <p className="text-xs tracking-[0.2em] uppercase text-zinc-500">
+            Loading session…
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

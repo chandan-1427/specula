@@ -1,116 +1,107 @@
-import React, { useState } from "react";
-import { useAuth } from "../context/useAuth";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 
+import AuthFormWrapper from "../components/layouts/AuthFormWrapper";
+import { CardTitle } from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import PasswordInput from "../components/ui/PasswordInput";
+import FormField from "../components/ui/FormField";
+
+import { useSignupForm } from "../hooks/useSignupForm";
+
 const SignupPage: React.FC = () => {
-  const { signup } = useAuth();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
 
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
-
-  const handleSubmit = async (e: React.SubmitEvent) => {
-    e.preventDefault();
-    try {
-      await signup(form.username, form.email, form.password);
-      navigate("/login"); // redirect on success
-    } catch (error) {
-      console.error("Signup failed:", error);
-    }
-  };
+  const {
+    form,
+    loading,
+    errorMessage,
+    successMessage,
+    handleChange,
+    handleSubmit,
+  } = useSignupForm();
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-8 shadow-xl backdrop-blur">
-          <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">
-            Create your account
-          </h2>
-          <p className="mb-8 text-center text-sm text-zinc-400">
-            Get started in a few seconds.
-          </p>
+    <AuthFormWrapper>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-300">
-                Username
-              </label>
-              <input
-                type="text"
-                placeholder="yourname"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                value={form.username}
-                onChange={(e) =>
-                  setForm({ ...form, username: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-300">
-                Email
-              </label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-300">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 pr-16 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-3 my-auto text-xs font-medium text-indigo-400 hover:text-indigo-300"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="mt-2 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
-            >
-              Sign up
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-xs text-zinc-500">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="font-medium text-indigo-400 hover:text-indigo-300"
-            >
-              Log in
-            </button>
-          </p>
-        </div>
+      {/* Header */}
+      <div className="mb-8 text-center">
+        <CardTitle className="mb-2 text-lg normal-case tracking-tight text-white">
+          Create your account
+        </CardTitle>
+        <p className="text-sm text-zinc-400">
+          Get started in a few seconds.
+        </p>
       </div>
-    </div>
+
+      {/* Error */}
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Success */}
+      {successMessage && (
+        <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <FormField label="Username">
+          <Input
+            type="text"
+            placeholder="yourname"
+            value={form.username}
+            onChange={(e) => handleChange("username", e.target.value)}
+            required
+          />
+        </FormField>
+
+        <FormField label="Email">
+          <Input
+            type="email"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            required
+          />
+        </FormField>
+
+        <FormField label="Password">
+          <PasswordInput
+            placeholder="••••••••"
+            value={form.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+            required
+          />
+        </FormField>
+
+        <Button
+          type="submit"
+          className="w-full mt-2"
+          disabled={loading}
+        >
+          {loading ? "Creating account..." : "Sign up"}
+        </Button>
+      </form>
+
+      {/* Footer */}
+      <p className="mt-6 text-center text-xs text-zinc-500">
+        Already have an account?{" "}
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="font-medium cursor-pointer text-indigo-400 hover:text-indigo-300"
+        >
+          Log in
+        </button>
+      </p>
+
+    </AuthFormWrapper>
   );
 };
 

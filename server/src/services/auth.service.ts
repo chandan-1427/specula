@@ -7,18 +7,26 @@ import type { SignupInput, LoginInput } from "../validations/auth.schema.js";
 import { env } from "../config/env.js";
 
 export class AuthService {
+  /**
+   * Register a new user.
+   *
+   * Performs an existence check before hashing the password to conserve CPU.
+   * Throws an error if the email or username is already in use. On rare
+   * race conditions a clear conflict error is returned instead of leaking
+   * database details.
+   */
   async signup(input: SignupInput) {
-    // 1. Pre-check: Don't waste CPU hashing if user exists
+    // look up existing user before hashing the provided password
     const existing = await db.query.users.findFirst({
       where: or(eq(users.email, input.email), eq(users.username, input.username)),
     });
 
     if (existing) {
       const field = existing.email === input.email ? "Email" : "Username";
-      throw new Error(`${field} already registered`); // Use a custom error class in real prod
+      throw new Error(`${field} already registered`);
     }
 
-    // 2. Hash now that we're reasonably sure the user is new
+    // hash the password after confirming uniqueness
     const hashedPassword = await argon2.hash(input.password);
 
     try {
@@ -35,7 +43,7 @@ export class AuthService {
 
       return newUser;
     } catch (error: any) {
-      // 3. Fallback for Race Conditions (if another request created the user between check and insert)
+      // handle potential concurrent insert conflict
       if (error.code === "23505") {
         throw new Error("Conflict: User data updated simultaneously. Please try again.");
       }
@@ -43,14 +51,21 @@ export class AuthService {
     }
   }
 
+  /**
+   * Authenticate a user and issue JWT access/refresh tokens.
+   *
+   * A constant‑time verification strategy is used to avoid timing attacks
+   * when the account does not exist.
+   *
+   * @throws Error if credentials are invalid.
+   */
   async login(input: LoginInput) {
-    // 1. Fetch user from Postgres
+    // find user by email
     const user = await db.query.users.findFirst({
       where: eq(users.email, input.email),
     });
 
-    // 2. Security: Constant-time password verification
-    // If user doesn't exist, we verify a dummy hash to prevent timing attacks
+    // verify password (or dummy hash when user missing) to keep timing constant
     const dummyHash = "$argon2id$v=19$m=65536,t=3,p=4$6P6..."; 
     const isValid = user 
       ? await argon2.verify(user.password, input.password) 
@@ -60,19 +75,19 @@ export class AuthService {
       throw new Error("Invalid email or password");
     }
 
-    // 3. Prepare Token Payloads
+    // build token payloads with expiration timestamps
     const now = Math.floor(Date.now() / 1000);
     
     const accessToken = await sign({
       sub: user.id,
       role: "user",
-      exp: now + (60 * 15), // 15 Minutes
+      exp: now + (60 * 15),
       iat: now,
     }, env.JWT_SECRET, "HS256");
 
     const refreshToken = await sign({
       sub: user.id,
-      exp: now + (60 * 60 * 24 * 7), // 7 Days
+      exp: now + (60 * 60 * 24 * 7),
       iat: now,
     }, env.JWT_REFRESH_SECRET, "HS256");
 

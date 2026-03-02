@@ -7,6 +7,13 @@ import { AuthService } from "../services/auth.service.js";
 import { getCookie, setCookie } from "hono/cookie";
 import { env } from "../config/env.js";
 
+/**
+ * Authentication router.
+ *
+ * Provides endpoints for signing up, logging in, refreshing tokens
+ * and logging out. All incoming request bodies are validated against
+ * Zod schemas before controller logic runs.
+ */
 const auth = new Hono();
 const authService = new AuthService();
 
@@ -21,7 +28,7 @@ auth.post("/signup", zValidator("json", signupSchema), async (c) => {
       data: user,
     }, 201);
   } catch (error: any) {
-    // Handle specific errors like unique constraint violations or manual service errors
+    // distinguish known conflict/validation errors from unexpected failures
   if (error.message.includes("already registered") || error.message.includes("already taken")) {
     return c.json({ success: false, message: error.message }, 409);
     }
@@ -36,19 +43,19 @@ auth.post("/login", zValidator("json", loginSchema), async (c) => {
     const body = c.req.valid("json");
     const { user, accessToken, refreshToken } = await authService.login(body);
 
-    // 🍪 Secure Refresh Token Cookie
+    // store the refresh token in an http-only cookie
     setCookie(c, "refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", 
       sameSite: "Lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 Days
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return c.json({
       success: true,
       message: "Login successful",
-      accessToken, // Frontend stores this in memory (State)
+      accessToken,
       user,
     }, 200);
 
@@ -62,7 +69,7 @@ auth.post("/login", zValidator("json", loginSchema), async (c) => {
 });
 
 auth.post("/refresh", async (c) => {
-  // 1. Get Refresh Token from Secure Cookie
+  // read refresh token from secure cookie
   const refreshToken = getCookie(c, "refresh_token");
 
   if (!refreshToken) {
@@ -70,16 +77,16 @@ auth.post("/refresh", async (c) => {
   }
 
   try {
-    // 2. Verify the Refresh Token
+    // validate the refresh token signature
     const payload = await verify(refreshToken, env.JWT_REFRESH_SECRET, "HS256");
     const userId = payload.sub as string;
 
-    // 3. Generate a fresh Access Token
+    // issue new access token with updated expiration
     const now = Math.floor(Date.now() / 1000);
     const newAccessToken = await sign({
       sub: userId,
       role: "user",
-      exp: now + (60 * 15), // 15 Minutes
+      exp: now + (60 * 15),
       iat: now,
     }, env.JWT_SECRET);
 

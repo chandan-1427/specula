@@ -8,6 +8,14 @@ redis.on("error", (err) => {
   console.error("Redis connection error:", err);
 });
 
+/**
+ * Create a simple IP-based rate limiting middleware using Redis.
+ *
+ * @param limit maximum number of requests allowed in the window
+ * @param windowSeconds duration of the rate limit window in seconds
+ * @returns Hono middleware that attaches rate limit headers and returns
+ *          429 when the limit is exceeded.
+ */
 export const rateLimiter = (limit: number, windowSeconds: number) => {
   return async (c: Context, next: Next) => {
     const ip =
@@ -42,7 +50,8 @@ export const rateLimiter = (limit: number, windowSeconds: number) => {
       await next();
     } catch (err) {
       console.error("Rate limiter failed:", err);
-      await next(); // Fail open
+      // on redis error we choose to fail open rather than block traffic
+      await next();
     }
   };
 };

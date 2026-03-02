@@ -1,0 +1,1 @@
+CREATE INDEX "agents_owner_external_idx" ON "agents" USING btree ("owner_id","external_agent_id");

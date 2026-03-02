@@ -1,3 +1,15 @@
+/**
+ * Database utility module.
+ *
+ * Sets up a connection pool, wraps basic query/transaction helpers, and
+ * exposes helpers used across the application.
+ */
+/**
+ * Database utility module.
+ *
+ * Sets up a connection pool, wraps basic query/transaction helpers, and
+ * exposes helpers used across the application.
+ */
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import type { PoolClient, QueryResultRow, QueryResult } from "pg";
@@ -6,7 +18,7 @@ import * as schema from "./schema.js";
 
 const isProduction = env.NODE_ENV === "production";
 
-// connection establishing
+// configure Postgres connection pool
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   ssl: isProduction 

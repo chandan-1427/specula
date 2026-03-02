@@ -1,3 +1,9 @@
+/**
+ * Redis client wrapper and helper utilities.
+ *
+ * Maintains a singleton client with retry logic, exposes safe cache
+ * helpers and a subscriber instance for pub/sub channels.
+ */
 import { createClient } from 'redis'
 import type { RedisClientType } from 'redis'
 import { env } from '../config/env.js'
@@ -13,27 +19,27 @@ if (!global._redis) {
   global._redis = createClient({
     url: env.REDIS_URL,
     socket: {
-      // Robust Retry Strategy
+      // simple exponential backoff reconnect strategy
       reconnectStrategy: (retries) => {
-        // Log the attempt
-        console.warn(`⚠️ Redis disconnected. Retrying attempt #${retries}...`)
+        // log each attempt
+        console.warn(`Redis disconnected, retry #${retries}`)
         return Math.min(retries * 100, 3000)
       }
     }
   })
 
-  // Error Logging (Prevent Unhandled Exception Crashes)
+  // handle errors without crashing the process
   global._redis.on('error', (err) => {
-    // Only log "Connection refused" as warning, others as error
+    // treat connection refused as a warning
     if (err.message.includes('ECONNREFUSED')) {
-      console.warn('⚠️ Redis connection refused (Is Redis running?)')
+      console.warn('Redis connection refused (is Redis running?)')
     } else {
-      console.error('❌ Redis Client Error:', err)
+      console.error('Redis client error:', err)
     }
   })
 
-  global._redis.on('connect', () => console.log('🔌 Redis connecting...'))
-  global._redis.on('ready', () => console.log('✅ Redis connected successfully'))
+  global._redis.on('connect', () => console.log('Redis connecting...'))
+  global._redis.on('ready', () => console.log('Redis connected successfully'))
 }
 
 redis = global._redis as RedisClientType
@@ -100,3 +106,26 @@ export const cache = {
     }
   }
 }
+
+// subscriber client used for pub/sub (inherits connection settings)
+export const redisSubscriber = redis.duplicate();
+
+// Important: The subscriber needs its own error handler and connection management
+redisSubscriber.on('error', (err) => {
+  console.error('Redis subscriber error:', err);
+});
+
+redisSubscriber.on('ready', () => console.log('Redis subscriber ready'));
+
+/**
+ * Helper to ensure both clients are connected
+ */
+export const connectAllRedis = async () => {
+  if (!redis.isOpen) await redis.connect();
+  if (!redisSubscriber.isOpen) await redisSubscriber.connect();
+};
+
+export const disconnectAllRedis = async () => {
+  if (redis.isOpen) await redis.quit();
+  if (redisSubscriber.isOpen) await redisSubscriber.quit();
+};

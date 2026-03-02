@@ -5,9 +5,9 @@ const Footer: React.FC = () => {
     <footer className="border-t border-zinc-800 bg-black/95 text-zinc-400">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm sm:flex-row">
         <div className="text-center sm:text-left">
-          <p className="text-base font-semibold text-white">DemoApp</p>
+          <p className="text-base font-semibold text-white">Specula</p>
           <p className="mt-1 text-xs text-zinc-500">
-            © {new Date().getFullYear()} DemoApp. All rights reserved.
+            © {new Date().getFullYear()} Specula. All rights reserved.
           </p>
         </div>
 
